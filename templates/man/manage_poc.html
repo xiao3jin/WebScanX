@@ -1,0 +1,324 @@
+{% include 'man/baseheader.html' %}
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ALL-POC Manage</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.12/themes/default/style.min.css"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.12/jstree.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body {
+            background-color: #f4f4f9;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        form {
+            max-width: 600px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        label {
+            display: block;
+            margin: 10px 0 5px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="file"], select {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            transition: border-color 0.3s;
+        }
+        input[type="text"]:focus, input[type="file"]:focus, select:focus {
+            border-color: #007BFF;
+            outline: none;
+        }
+        #folder-tree, #template-tree {
+            width: 100%;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #fafafa;
+            padding: 10px;
+        }
+        .button-container {
+            display: flex;
+            justify-content: space-between;
+            margin: 15px 0;
+        }
+        button {
+            flex: 1;
+            margin: 0 5px;
+            padding: 10px;
+            background-color: #007BFF;
+            border: none;
+            color: white;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 24px;
+            }
+            button {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>POC管理</h1>
+
+    <!-- 新建文件夹 -->
+    <div>
+        <h2>新建文件夹</h2>
+        <form id="create-folder-form">
+            {% csrf_token %}
+            <label for="folder_name">文件夹名称:</label>
+            <input type="text" id="folder_name" name="folder_name" required>
+            <input type="hidden" id="current_path" name="current_path" value="">
+            <button type="submit">创建文件夹</button>
+        </form>
+    </div>
+
+    <!-- 上传POC文件的表单 -->
+    <div>
+        <h2>上传个人POC</h2>
+        <form id="upload-poc-form" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="file" name="poc_file" accept=".yaml" required>
+            <label for="upload_folder">选择目标文件夹:</label>
+            <div id="folder-tree"></div>
+            <input type="hidden" name="upload_folder" id="upload_folder" value="mypoc">
+
+            <div class="button-container">
+                <button type="button" id="prev-page" disabled>上一页</button>
+                <span id="page-info">第 1 页</span>
+                <button type="button" id="next-page">下一页</button>
+            </div>
+
+            <button type="submit">上传</button>
+        </form>
+    </div>
+
+    <!-- 下载POC文件 -->
+    <div>
+        <h2>下载POC</h2>
+        <form id="download-poc-form" method="post" action="">
+            {% csrf_token %}
+            <label>全部POC:</label>
+            <div id="template-tree"></div>
+            <input type="hidden" name="selected_pocs" id="selected_pocs"/>
+            <button type="submit">下载选中的POC</button>
+        </form>
+    </div>
+
+<script>
+    function formatToJsTreeData(data) {
+        var result = [];
+        for (var key in data) {
+            if (typeof data[key] === 'object') {
+                result.push({
+                    "text": key,
+                    "children": formatToJsTreeData(data[key]),
+                    "icon": "jstree-folder"
+                });
+            } else {
+                result.push({
+                    "text": data[key],
+                    "id": data[key],
+                    "path": data[key],
+                    "is_file": true,
+                    "icon": "jstree-file"
+                });
+            }
+        }
+        return result;
+    }
+
+    let currentPage = 1;
+    const pageSize = 10;
+
+    function loadFolders(page) {
+        $.ajax({
+            url: "{% url 'get_poc_folders' %}?page=" + page + "&page_size=" + pageSize,
+            method: "GET",
+            success: function (data) {
+                $('#folder-tree').jstree('destroy').empty();
+                $('#folder-tree').jstree({
+                    'core': {
+                        'data': data.folders.map(folder => ({
+                            "text": folder,
+                            "id": folder,
+                            "icon": "jstree-folder"
+                        }))
+                    },
+                    "plugins": ["wholerow"]
+                });
+                $('#page-info').text('第 ' + data.page_number + ' 页');
+                $('#prev-page').prop('disabled', currentPage === 1);
+                $('#next-page').prop('disabled', data.total <= pageSize * currentPage);
+            }
+        });
+    }
+
+    function reloadFolderTree() {
+        loadFolders(currentPage);
+    }
+
+    $(document).ready(function () {
+        loadFolders(currentPage);
+
+        $('#prev-page').on('click', function () {
+            if (currentPage > 1) {
+                currentPage--;
+                loadFolders(currentPage);
+            }
+        });
+
+        $('#next-page').on('click', function () {
+            currentPage++;
+            loadFolders(currentPage);
+        });
+
+        $('#folder-tree').on("changed.jstree", function (e, data) {
+            if(data.selected.length) {
+                $('#upload_folder').val(data.instance.get_node(data.selected[0]).id);
+                console.log("Selected folder:", $('#upload_folder').val());
+            }
+        });
+
+        $.ajax({
+            url: "{% url 'get_poc_templates' %}",
+            method: "GET",
+            success: function (data) {
+                var folders = formatToJsTreeData(data.templates);
+                $('#template-tree').jstree({
+                    'core': {
+                        'data': folders
+                    },
+                    "plugins": ["checkbox"]
+                });
+            }
+        });
+
+        $('#template-tree').on("select_node.jstree", function (e, data) {
+            $('#current_path').val(data.node.original.path);
+        });
+
+        $('#download-poc-form').on('submit', function (e) {
+            var selected = $('#template-tree').jstree("get_checked", true);
+            var selected_templates = [];
+            selected.forEach(function (node) {
+                if (node.original.is_file) {
+                    selected_templates.push(node.original.path);
+                }
+            });
+            $('#selected_pocs').val(JSON.stringify(selected_templates));
+        });
+
+        $('#create-folder-form').on('submit', function(e) {
+            e.preventDefault();
+            Swal.fire({
+                title: '创建中...',
+                text: '正在创建文件夹',
+                allowOutsideClick: false,
+                onBeforeOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            $.ajax({
+                url: "{% url 'create_folder' %}",
+                method: "POST",
+                data: $(this).serialize(),
+                success: function(response) {
+                    Swal.fire({
+                        title: '成功',
+                        text: '文件夹创建成功',
+                        icon: 'success',
+                        confirmButtonText: '确定'
+                    }).then(() => {
+                        location.reload(); // 刷新页面
+                    });
+                },
+                error: function() {
+                    Swal.fire({
+                        title: '错误',
+                        text: '文件夹创建失败',
+                        icon: 'error',
+                        confirmButtonText: '确定'
+                    });
+                }
+            });
+        });
+
+        $('#upload-poc-form').on('submit', function(e) {
+            e.preventDefault();
+            var formData = new FormData(this);
+
+            console.log("Uploading to folder:", formData.get('upload_folder'));
+
+            Swal.fire({
+                title: '上传中...',
+                text: '正在上传POC文件',
+                allowOutsideClick: false,
+                onBeforeOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            $.ajax({
+                url: "{% url 'upload_poc' %}",
+                method: "POST",
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    Swal.fire({
+                        title: '成功',
+                        text: 'POC上传成功到 ' + formData.get('upload_folder') + ' 文件夹',
+                        icon: 'success',
+                        confirmButtonText: '确定'
+                    }).then(() => {
+                        location.reload(); // 刷新页面
+                    });
+                },
+                error: function(xhr, status, error) {
+                    console.error("Upload error:", xhr.responseText);
+                    Swal.fire({
+                        title: '错误',
+                        text: 'POC上传失败: ' + xhr.responseText,
+                        icon: 'error',
+                        confirmButtonText: '确定'
+                    });
+                }
+            });
+        });
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,280 @@
+
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebXplore - 端口扫描工具</title>
+    <link href="//unpkg.com/layui@2.9.16/dist/css/layui.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            background-color: #f0f2f5;
+        }
+        .layui-layout-admin .layui-header {
+            background-color: #001529;
+        }
+        .layui-layout-admin .layui-side {
+            background-color: #001529;
+        }
+        .layui-nav-tree .layui-nav-item a {
+            color: #fff;
+        }
+        .layui-body {
+            padding: 15px;
+            background-color: #fff;
+            box-shadow: 0 1px 2px 0 rgba(0,0,0,.05);
+        }
+        .layui-card {
+            border-radius: 4px;
+            box-shadow: 0 1px 2px 0 rgba(0,0,0,.05);
+        }
+        .layui-card-header {
+            font-weight: bold;
+            font-size: 16px;
+        }
+        #result {
+            border: 1px solid #e6e6e6;
+            padding: 10px;
+            margin-top: 15px;
+            background-color: #f8f8f8;
+            border-radius: 4px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .scan-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .scan-option {
+            flex: 1;
+            min-width: 200px;
+        }
+    </style>
+</head>
+<body>
+<div class="layui-layout layui-layout-admin">
+    <div class="layui-header">
+         <div class="layui-logo layui-hide-xs layui-bg-black">WebScanX</div>
+        <ul class="layui-nav layui-layout-right">
+            <li class="layui-nav-item layui-hide layui-show-sm-inline-block">
+                <a href="javascript:;">
+                    <img src="//unpkg.com/outeres@0.0.10/img/layui/icon-v2.png" class="layui-nav-img">
+                    admin
+                </a>
+                <dl class="layui-nav-child">
+                    <dd><a href="/manager/myinfo/">个人信息</a></dd>
+                    <dd><a href="javascript:;">退出</a></dd>
+                </dl>
+            </li>
+        </ul>
+    </div>
+
+    <div class="layui-side layui-bg-black">
+        <div class="layui-side-scroll">
+            <ul class="layui-nav layui-nav-tree" lay-filter="test">
+                <li class="layui-nav-item"><a href="/manager/myinfo/">我的信息</a></li>
+                <li class="layui-nav-item"><a href="/manager/userman/">用户管理</a></li>
+                <li class="layui-nav-item"><a href="/manager/fingerman/">指纹管理</a></li>
+                <li class="layui-nav-item"><a href="/manager/fingertype/">指纹分类管理</a></li>
+                <li class="layui-nav-item"><a href="/manager/scan_form/">漏洞探测</a></li>
+                <li class="layui-nav-item"><a href="/manager/port_scan_form/">端口扫描</a></li>
+                <li class="layui-nav-item"><a href="/manager/finger_scan_form/">指纹识别</a></li>
+                <li class="layui-nav-item"><a href="/manager/pocmanage/">POC管理</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="layui-body">
+        <div class="layui-container">
+            <div class="layui-card">
+                <div class="layui-card-header">端口扫描</div>
+                <div class="layui-card-body">
+                    <form id="masscan-form" class="layui-form">
+                        <div class="layui-form-item layui-form-text">
+                            <label class="layui-form-label">IP 地址/范围</label>
+                            <div class="layui-input-block">
+                                <textarea name="ip_range" placeholder="每行一个IP地址/范围" class="layui-textarea" required></textarea>
+                            </div>
+                        </div>
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">端口</label>
+                            <div class="layui-input-block">
+                                <input type="text" name="ports" required lay-verify="required" placeholder="例如: 80,443" autocomplete="off" class="layui-input">
+                            </div>
+                        </div>
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">扫描选项</label>
+                            <div class="layui-input-block">
+                                <input type="checkbox" name="sS" title="半开放扫描 (-sS)">
+                                <input type="checkbox" name="Pn" title="跳过主机发现 (-Pn)">
+                                <input type="checkbox" name="randomize_hosts" title="随机化扫描">
+                                <input type="checkbox" name="banners" title="获取 banner 信息">
+                            </div>
+                        </div>
+                        <div class="scan-options">
+                            <div class="scan-option">
+                                <label class="layui-form-label">发包速率</label>
+                                <div class="layui-input-block">
+                                    <input type="number" name="rate" placeholder="--rate" autocomplete="off" class="layui-input">
+                                </div>
+                            </div>
+                            <div class="scan-option">
+                                <label class="layui-form-label">User-Agent</label>
+                                <div class="layui-input-block">
+                                    <input type="text" name="http_user_agent" placeholder="--http-user-agent" value="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 Edg/128.0.0.0" autocomplete="off" class="layui-input">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="scan-options">
+                            <div class="scan-option">
+                                <label class="layui-form-label">配置文件</label>
+                                <div class="layui-input-block">
+                                    <input type="text" name="conf_file" placeholder="配置文件路径 (-c)" autocomplete="off" class="layui-input">
+                                </div>
+                            </div>
+                            <div class="scan-option">
+                                <label class="layui-form-label">网卡接口</label>
+                                <div class="layui-input-block">
+                                    <input type="text" name="adapter" placeholder="网卡接口名称 (-e)" autocomplete="off" class="layui-input">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="scan-options">
+                            <div class="scan-option">
+                                <label class="layui-form-label">适配器 IP</label>
+                                <div class="layui-input-block">
+                                    <input type="text" name="adapter_ip" placeholder="发包的IP地址" autocomplete="off" class="layui-input">
+                                </div>
+                            </div>
+                            <div class="scan-option">
+                                <label class="layui-form-label">适配器 MAC</label>
+                                <div class="layui-input-block">
+                                    <input type="text" name="adapter_mac" placeholder="发包的源MAC地址" autocomplete="off" class="layui-input">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="scan-options">
+                            <div class="scan-option">
+                                <label class="layui-form-label">路由器 MAC</label>
+                                <div class="layui-input-block">
+                                    <input type="text" name="router_mac" placeholder="网关的MAC地址" autocomplete="off" class="layui-input">
+                                </div>
+                            </div>
+                            <div class="scan-option">
+                                <label class="layui-form-label">黑名单</label>
+                                <div class="layui-input-block">
+                                    <input type="text" name="exclude" placeholder="黑名单IP地址范围" autocomplete="off" class="layui-input">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="scan-options">
+                            <div class="scan-option">
+                                <label class="layui-form-label">黑名单文件</label>
+                                <div class="layui-input-block">
+                                    <input type="text" name="excludefile" placeholder="黑名单文件路径" autocomplete="off" class="layui-input">
+                                </div>
+                            </div>
+                            <div class="scan-option">
+                                <label class="layui-form-label">包含文件</label>
+                                <div class="layui-input-block">
+                                    <input type="text" name="includefile" placeholder="包含文件路径" autocomplete="off" class="layui-input">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="layui-form-item">
+                            <div class="layui-input-block">
+                                <input type="checkbox" name="ping" title="包含 ICMP 请求 (--ping)">
+                            </div>
+                        </div>
+                        <div class="scan-options">
+                            <div class="scan-option">
+                                <label class="layui-form-label">重试次数</label>
+                                <div class="layui-input-block">
+                                    <input type="number" name="retries" placeholder="--retries" autocomplete="off" class="layui-input">
+                                </div>
+                            </div>
+                            <div class="scan-option">
+                                <label class="layui-form-label">TTL</label>
+                                <div class="layui-input-block">
+                                    <input type="number" name="ttl" placeholder="默认为255 (--ttl)" autocomplete="off" class="layui-input">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">等待时间</label>
+                            <div class="layui-input-block">
+                                <input type="number" name="wait" placeholder="默认为10秒 (--wait)" autocomplete="off" class="layui-input">
+                            </div>
+                        </div>
+                        <div class="layui-form-item">
+                            <div class="layui-input-block">
+                                <button class="layui-btn layui-btn-normal" lay-submit lay-filter="masscanForm">开始扫描</button>
+                                <button type="button" id="stop-scan" class="layui-btn layui-btn-danger" style="display:none;">停止扫描</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="layui-card" style="margin-top: 20px;">
+                <div class="layui-card-header">扫描结果</div>
+                <div class="layui-card-body">
+                    <pre id="result"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="//unpkg.com/layui@2.9.16/dist/layui.js"></script>
+<script>
+layui.use(['form', 'layer'], function () {
+    var form = layui.form;
+    var layer = layui.layer;
+
+    form.on('submit(masscanForm)', function (data) {
+        $('#stop-scan').show();
+        layer.msg('扫描已开始', {icon: 16, time: 0});
+        $.ajax({
+            type: 'POST',
+            url: "{% url 'port_scan' %}",
+            data: data.field,
+            success: function (response) {
+                layer.closeAll();
+                $('#result').text('');
+                $('#result').text(response.result);
+                $('#result').prepend("新结果已更新:\n");
+                $('#stop-scan').hide();
+                layer.msg('扫描完成', {icon: 1});
+            },
+            error: function (xhr) {
+                layer.closeAll();
+                layer.msg('扫描失败: ' + xhr.responseText, {icon: 2});
+                $('#stop-scan').hide();
+            }
+        });
+        return false;
+    });
+
+    $('#stop-scan').on('click', function () {
+        layer.confirm('确定要停止扫描吗？', {icon: 3, title:'提示'}, function(index){
+            $.ajax({
+                type: 'POST',
+                url: "{% url 'stop_port_scan' %}",
+                success: function (response) {
+                    $('#result').append("\n扫描已停止。");
+                    $('#stop-scan').hide();
+                    layer.msg('扫描已停止', {icon: 1});
+                },
+                error: function (xhr) {
+                    layer.msg('停止扫描失败: ' + xhr.responseText, {icon: 2});
+                }
+            });
+            layer.close(index);
+        });
+    });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,144 @@
+{#{% include 'man/baseheader.html' %}#}
+
+<style>
+    #poc-list {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+   .poc-item {
+        margin-bottom: 5px;
+    }
+
+   .scan-form {
+        background-color: rgba(255, 255, 255, 0.1);
+        padding: 20px;
+        border-radius: 10px;
+        margin-top: 20px;
+    }
+
+   .scan-form input[type="text"],
+   .scan-form input[type="submit"] {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 10px;
+        border-radius: 5px;
+        border: 1px solid #ddd;
+    }
+
+   .scan-form input[type="submit"] {
+        background-color: #009688;
+        color: white;
+        border: none;
+        cursor: pointer;
+    }
+
+   .scan-form input[type="submit"]:hover {
+        background-color: #00796b;
+    }
+
+   .module {
+        margin-bottom: 10px;
+    }
+</style>
+
+<div class="layui-container">
+    <meta charset="UTF-8">
+    <h1 class="layui-title">Web Security Scanner</h1>
+    <form method="post" class="scan-form">
+        {% csrf_token %}
+        <input type="text" name="target_url" id='target_url' placeholder="输入目标" required>
+        <h3>选择模式:</h3>
+        <div class="module">
+            <input type="checkbox" name="scan" title="端口扫描" value="port" lay-skin="primary">
+            <label for="port_scan">端口扫描</label>
+        </div>
+        <div class="module">
+             <input type="checkbox" name="scan" title="子域名" value="subdomain" lay-skin="primary">
+            <label for="subdomain_scan">子域名扫描</label>
+        </div>
+        <div class="module">
+            <input type="checkbox" name="modules" value="ip_info" id="ip_info">
+            <label for="ip_info">IP信息查询</label>
+        </div>
+        <div class="module">
+            <input type="checkbox" name="modules" value="dir_scan" id="dir_scan">
+            <label for="dir_scan">目录扫描</label>
+        </div>
+        <div class="module">
+            <input type="checkbox" name="modules" value="fofa_scan" id="fofa_scan">
+            <label for="fofa_scan">FOFA扫描</label>
+        </div>
+        <div class="module">
+             <input type="checkbox" name="scan" title="Nuclei扫描" value="nuclei" lay-skin="primary" id="poc_scan">
+            <label for="poc_scan">漏洞扫描</label>
+        </div>
+        <div id="poc-selection" style="display: none;">
+            <h4>Select POCs:</h4>
+            <input type="text" id="poc-search" placeholder="Search POCs...">
+            <div>
+                <input type="checkbox" id="select-all-pocs">
+                <label for="select-all-pocs">Select All</label>
+            </div>
+            <div id="poc-list">
+                {% for poc in pocs %}
+                <div class="poc-item">
+                    <input type="checkbox" name="pocs" value="{{ poc.id }}" id="poc-{{ poc.id }}">
+                    <label for="poc-{{ poc.id }}">{{ poc.name }} - {{ poc.description }}</label>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        <input type="submit" value="Start Scan">
+    </form>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    function checkStatus() {
+        $.get('/status/{{ task.id }}/', function (data) {
+            if (data.status === 'completed') {
+                location.reload();
+            } else {
+                setTimeout(checkStatus, 5000);
+            }
+        });
+    }
+    $(document).ready(function () {
+        if ('{{ task.status }}'!== 'completed') {
+            checkStatus();
+        }
+        $('#port_scan').change(function () {
+            if (this.checked) {
+                $('<div><label for="port_input">Enter ports to scan:</label><input type="text" name="ports" id="port_input"></div>').insertAfter('#port_scan');
+            } else {
+                $('#port_input').remove();
+            }
+        });
+    });
+    $(document).ready(function () {
+        $('#poc-search').on('input', function () {
+            var query = $(this).val();
+            $.get('/search_pocs/', { q: query }, function (data) {
+                var pocList = $('#poc-list');
+                pocList.empty();
+                data.pocs.forEach(function (poc) {
+                    pocList.append(
+                        '<div class="poc-item">' +
+                        '<input type="checkbox" name="pocs" value="' + poc.id + '" id="poc-' + poc.id + '">' +
+                        '<label for="poc-' + poc.id + '">' + poc.name + ' - ' + poc.description + '</label>' +
+                        '</div>'
+                    );
+                });
+            });
+        });
+
+        $('#select-all-pocs').change(function () {
+            $('.poc-item input[type="checkbox"]').prop('checked', this.checked);
+        });
+
+        $('#poc_scan').change(function () {
+            $('#poc-selection').toggle(this.checked);
+        });
+    });
+</script>

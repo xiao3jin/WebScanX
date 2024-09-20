@@ -1,0 +1,62 @@
+{% include 'man/baseheader.html' %}
+<div class="layui-body">
+    <div class="layui-container">
+        <h2>扫描状态</h2>
+        <div id="status"></div>
+        <div class="loading" style="display: none;">
+            <i class="layui-icon layui-icon-loading layui-anim layui-anim-rotate layui-anim-loop" style="font-size: 30px;"></i>
+            <p>扫描中...</p>
+        </div>
+        <button id="stop-scan" class="layui-btn layui-btn-danger">停止扫描</button>
+        <div id="result-link" style="display: none;">
+            <a id="download-link" class="layui-btn layui-btn-normal" href="#" download>下载结果文件</a>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // 显示加载动画
+        $('.loading').show();
+
+        // 定时检查扫描状态
+        const checkStatus = setInterval(() => {
+            $.get('/manager/check_scan_status/', function (data) {
+                $('#status').text(data.status);
+                if (data.finished) {
+                    clearInterval(checkStatus);
+                    $('.loading').hide();
+                    $('#result-link').show();
+                    $('#download-link').attr('href', '/manager/download_results/');
+                }
+            });
+        }, 2000); // 每2秒检查一次
+
+        // 停止扫描
+        $('#stop-scan').click(function () {
+            stopScanning();
+        });
+
+        // 页面关闭时停止扫描
+        $(window).on('beforeunload', function () {
+            if (navigator.sendBeacon) {
+                navigator.sendBeacon('/manager/stop_scan/');
+            }
+        });
+
+        function stopScanning() {
+            $.post('/manager/stop_scan/', function (data) {
+                $('#status').text('扫描已停止。');
+                clearInterval(checkStatus);
+                $('.loading').hide();
+                $('#stop-scan').prop('disabled', true);
+            });
+        }
+    });
+</script>
+
+<div class="layui-footer">
+    <!-- 底部固定区域 -->
+    <div class="cyber-footer">WebScan &copy; 2024</div>
+</div>

@@ -1,0 +1,193 @@
+{% include 'man/baseheader.html' %}
+<head>
+    <meta charset="UTF-8">
+    <title>Nuclei 扫描器</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.12/themes/default/style.min.css"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.12/jstree.min.js"></script>
+    <style>
+        body {
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        form {
+            max-width: 600px;
+            margin: auto;
+        }
+
+        label {
+            display: block;
+            margin: 10px 0 5px;
+        }
+
+        input[type="text"], select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        #template-tree {
+            width: 100%;
+            height: auto;
+            max-height: 300px;
+            overflow: auto;
+        }
+
+        button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background-color: #1E9FFF;
+            border: none;
+            color: white;
+            font-size: 16px;
+            border-radius: 4px;
+        }
+
+        button:hover {
+            background-color: #009688;
+        }
+
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 24px;
+            }
+
+            button {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+<h1>Nuclei 扫描器</h1>
+<form id="nuclei-form" method="post" action="{% url 'run_nuclei_scan' %}">
+    {% csrf_token %}
+    <label for="target_urls">目标 URL / 文件:</label>
+    <input type="text" id="target_urls" name="target_url" required/>
+
+    <label for="scan_type">扫描类型:</label>
+    <select name="scan_type" id="scan_type">
+        <option value="single">单个 URL</option>
+        <option value="batch">批量 URL</option>
+    </select>
+
+    <label>选择 POC 模板:</label>
+    <div id="template-tree"
+         style="border:1px solid #ccc; padding:10px;"></div>
+    <input type="hidden" name="poc_templates" id="poc_templates"/>
+
+    <!-- 其他过滤器 -->
+    <label for="author">作者 (可选):</label>
+    <input type="text" id="author" name="author" placeholder="填写作者名"/>
+
+    <label for="tags">标签 (可选):</label>
+    <input type="text" id="tags" name="tags" placeholder="填写标签，多个用逗号分隔"/>
+
+    <label for="severity">严重性 (可选):</label>
+    <input type="text" id="severity" name="severity" placeholder="填写严重性等级"/>
+
+    <label for="tc">条件标志 (可选):</label>
+    <input type="text" id="tc" name="tc" placeholder="填写条件标志"/>
+
+    <button type="submit">开始扫描</button>
+</form>
+
+<script>
+    function formatToJsTreeData(data) {
+        var result = [];
+        for (var key in data) {
+            if (typeof data[key] === 'object') {
+                result.push({
+                    "text": key,
+                    "children": formatToJsTreeData(data[key]),
+                    "icon": "jstree-folder" // 添加文件夹图标
+                });
+            } else {
+                result.push({
+                    "text": data[key],
+                    "id": data[key],
+                    "path": data[key],
+                    "is_file": true,
+                    "icon": "jstree-file" // 添加文件图标
+                });
+            }
+        }
+        return result;
+    }
+
+    $(document).ready(function () {
+        // 获取模板文件结构
+        $.ajax({
+            url: "{% url 'get_poc_templates' %}",
+            method: "GET",
+            success: function (data) {
+                // 使用jstree展示模板文件结构
+                $('#template-tree').jstree({
+                    'core': {
+                        'data': formatToJsTreeData(data.templates)
+                    },
+                    "plugins": ["checkbox"]
+                });
+            }
+        });
+
+        // 表单提交前，获取选中的模板
+        $('#nuclei-form').on('submit', function (e) {
+            var selected = $('#template-tree').jstree("get_checked", true);
+            var selected_templates = [];
+
+            selected.forEach(function (node) {
+                if (node.original.is_file) {
+                    selected_templates.push(node.original.path);
+                }
+            });
+
+            // 从输入框获取目标 URL
+            var target_url = $('#target_urls').val().trim();
+
+            // 如果没有选择模板，那么只使用 -u 参数
+            if (selected_templates.length === 0 && !target_url) {
+                alert("请至少选择一个模板文件或输入目标 URL ！");
+                e.preventDefault(); // 阻止表单提交
+                return; // 退出当前函数
+            }
+
+            // 如果没有选择模板，但有目标 URL，就默认使用 -u
+            if (selected_templates.length === 0) {
+                $('#poc_templates').val(''); // 清除隐藏字段
+            } else {
+                // 将选中的模板路径以逗号分隔
+                $('#poc_templates').val(selected_templates.join(','));
+            }
+        });
+
+        // 将后端返回的文件结构转换为jstree格式
+        function formatToJsTreeData(data) {
+            var result = [];
+            for (var key in data) {
+                if (typeof data[key] === 'object') {
+                    result.push({
+                        "text": key,
+                        "children": formatToJsTreeData(data[key])
+                    });
+                } else {
+                    result.push({
+                        "text": data[key],
+                        "id": data[key],
+                        "path": data[key],
+                        "is_file": true
+                    });
+                }
+            }
+            return result;
+        }
+    });
+</script>
+</body>

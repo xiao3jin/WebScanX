@@ -1,0 +1,82 @@
+{% include 'man/baseheader.html' %}
+<div class="layui-body">
+    <br><br>
+    <div class="cyber-container">
+        <div class="cyber-box" style="max-width: 400px; padding: 30px; border: 2px solid #2E3B4E; border-radius: 10px; box-shadow: 0 0 20px rgba(0, 0, 0, 0.1); background-color: #fff;">
+            <div class="cyber-title">
+                <h2 style="color: #2E3B4E;">添加用户</h2>
+                <div class="cyber-line" style="width: 80%; height: 2px; background: linear-gradient(to right, transparent, #3498db, transparent); margin: 10px auto;"></div>
+            </div>
+            <form class="layui-form layui-form-pane cyber-form" action="" method="post">
+                <div class="layui-form-item">
+                    <label class="layui-form-label" style="width: 80px; color: #2E3B4E;">用户名</label>
+                    <div class="layui-input-block" style="width: 70%;">
+                        <input type="text" name="name" autocomplete="off" placeholder="请输入用户名" lay-verify="required" class="layui-input cyber-input" style="height: 40px; border: 1px solid #2E3B4E;">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label" style="width: 80px; color: #2E3B4E;">密码</label>
+                    <div class="layui-input-block" style="width: 70%;">
+                        <input type="password" name="pwd" autocomplete="off" placeholder="请输入密码" lay-verify="required" class="layui-input cyber-input" style="height: 40px; border: 1px solid #2E3B4E;">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <div class="layui-input-block" style="text-align: center;">
+                        <button class="layui-btn cyber-btn" lay-submit lay-filter="demo2" style="width: 80%; padding: 12px 20px; font-size: 17px; background-color: #3498db; color: #fff;">
+                            确认
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="layui-footer">
+        <div class="cyber-footer">WebScan &copy; 2024</div>
+    </div>
+</div>
+
+<script src="//unpkg.com/layui@2.9.16/dist/layui.js"></script>
+<script>
+    layui.use(['element', 'layer', 'util'], function () {
+        var element = layui.element;
+        var layer = layui.layer;
+        var util = layui.util;
+        var $ = layui.$;
+
+        //头部事件
+        util.event('lay-header-event', {
+            menuRight: function () {
+                layer.open({
+                    type: 1,
+                    content: '<div style="padding: 15px;">处理右侧面板的操作</div>',
+                    area: ['260px', '100%'],
+                    offset: 'rt',
+                    anim: 5,
+                    shadeClose: true
+                });
+            }
+        });
+    });
+</script>
+
+<style>
+    .cyber-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: calc(100vh - 120px); /* 使表单垂直居中 */
+    }
+    .cyber-input {
+        transition: border-color 0.3s;
+    }
+    .cyber-input:focus {
+        border-color: #3498db; /* 聚焦时边框颜色变化 */
+    }
+    .cyber-btn {
+        transition: background-color 0.3s;
+    }
+    .cyber-btn:hover {
+        background-color: #2980b9; /* 按钮悬停效果 */
+    }
+</style>

@@ -1,0 +1,176 @@
+{% include 'man/baseheader.html' %}
+<div class="layui-body">
+    <!-- 内容主体区域 -->
+    <br><br>
+    <div class="cyber-container">
+        <div class="cyber-box">
+            <div class="cyber-title">
+                <h2>用户管理</h2>
+                <div class="cyber-line"></div>
+            </div>
+            <a href="/manager/adduser/" class="cyber-btn-add">
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+                添加用户
+            </a>
+
+            <!-- 表格外层容器，支持横向滚动 -->
+            <div style="overflow-x: auto;">
+                <table class="cyber-table" style="width: 100%; table-layout: auto;">
+                    <thead>
+                        <tr>
+                            <th style="min-width: 150px;">用户名</th>
+                            <th style="min-width: 200px;">密码</th>
+                            <th style="min-width: 100px;">状态</th>
+                            <th style="min-width: 150px;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in all_user %}
+                        <tr>
+                            <td>{{ user.uname }}</td>
+                            <td>{{ user.upwd }}</td>
+                            <td>
+                                {% if user.status == 1 %}
+                                <span class="cyber-status-normal">正常</span>
+                                {% else %}
+                                <span class="cyber-status-disabled">禁用</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if user.status == 1 %}
+                                <a href="/manager/deluser/?id={{ user.id }}&type=2" class="cyber-action-btn">禁用</a>
+                                {% else %}
+                                <a href="/manager/deluser/?id={{ user.id }}&type=3" class="cyber-action-btn">恢复</a>
+                                {% endif %}
+                                <a href="/manager/deluser/?id={{ user.id }}&type=1" class="cyber-action-btn cyber-action-delete">删除</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 分页和每页显示条数设置 -->
+            <div class="pagination" style="margin-top: 20px;">
+                <span class="step-links">
+                    {% if page_obj.has_previous %}
+                    <a href="?page=1&items_per_page={{ items_per_page }}">« 首页</a>
+                    <a href="?page={{ page_obj.previous_page_number }}&items_per_page={{ items_per_page }}">上一页</a>
+                    {% endif %}
+
+                    <span class="current">
+                        第 {{ page_obj.number }} 页，共 {{ page_obj.paginator.num_pages }} 页。
+                    </span>
+
+                    {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}&items_per_page={{ items_per_page }}">下一页</a>
+                    <a href="?page={{ page_obj.paginator.num_pages }}&items_per_page={{ items_per_page }}">尾页 »</a>
+                    {% endif %}
+                </span>
+            </div>
+
+            <!-- 每页显示条数设置 -->
+            <form method="get" style="margin-top: 10px;">
+                <label for="items_per_page">每页显示:</label>
+                <select name="items_per_page" id="items_per_page" onchange="this.form.submit()">
+                    <option value="5" {% if items_per_page == "5" %}selected{% endif %}>5</option>
+                    <option value="10" {% if items_per_page == "10" %}selected{% endif %}>10</option>
+                    <option value="20" {% if items_per_page == "20" %}selected{% endif %}>20</option>
+                    <option value="50" {% if items_per_page == "50" %}selected{% endif %}>50</option>
+                </select>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="layui-footer">
+    <div class="cyber-footer">WebScan &copy; 2024</div>
+</div>
+
+<script src="//unpkg.com/layui@2.9.16/dist/layui.js"></script>
+<script>
+    layui.use(['element', 'layer', 'util'], function () {
+        var element = layui.element;
+        var layer = layui.layer;
+        var util = layui.util;
+        var $ = layui.$;
+
+        //头部事件
+        util.event('lay-header-event', {
+            menuLeft: function (othis) {
+                layer.msg('展开左侧菜单的操作', { icon: 0 });
+            },
+            menuRight: function () {
+                layer.open({
+                    type: 1,
+                    title: '更多',
+                    content: '<div style="padding: 15px;">处理右侧面板的操作</div>',
+                    area: ['260px', '100%'],
+                    offset: 'rt',
+                    anim: 'slideLeft',
+                    shadeClose: true,
+                    scrollbar: false
+                });
+            }
+        });
+    });
+</script>
+
+<style>
+    .cyber-container {
+        padding: 20px;
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    .cyber-title {
+        margin-bottom: 20px;
+    }
+    .cyber-line {
+        height: 2px;
+        background-color: #3498db;
+        margin-top: 10px;
+        width: 50px;
+    }
+    .cyber-btn-add {
+        display: inline-block;
+        padding: 10px 20px;
+        background-color: #3498db;
+        color: #fff;
+        border-radius: 5px;
+        text-decoration: none;
+        margin-bottom: 20px;
+    }
+    .cyber-btn-add:hover {
+        background-color: #2980b9;
+    }
+    .cyber-table {
+        border-collapse: collapse;
+        width: 100%;
+    }
+    .cyber-table th, .cyber-table td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+    }
+    .cyber-status-normal {
+        color: green;
+    }
+    .cyber-status-disabled {
+        color: red;
+    }
+    .cyber-action-btn {
+        color: #3498db;
+        text-decoration: none;
+        margin-right: 10px;
+    }
+    .cyber-action-delete {
+        color: red;
+    }
+    .cyber-action-btn:hover {
+        text-decoration: underline;
+    }
+</style>

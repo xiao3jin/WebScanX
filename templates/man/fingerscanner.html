@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebScanX - 指纹识别</title>
+    <link href="//unpkg.com/layui@2.9.16/dist/css/layui.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            background-color: #f0f2f5;
+        }
+
+        .layui-layout-admin .layui-header {
+            background-color: #001529;
+        }
+
+        .layui-layout-admin .layui-side {
+            background-color: #001529;
+        }
+
+        .layui-nav-tree .layui-nav-item a {
+            color: #fff;
+        }
+
+        .layui-body {
+            padding: 15px;
+            background-color: #fff;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, .05);
+        }
+
+        .layui-card {
+            border-radius: 4px;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, .05);
+        }
+
+        .layui-card-header {
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        #result {
+            border: 1px solid #e6e6e6;
+            padding: 10px;
+            margin-top: 15px;
+            background-color: #f8f8f8;
+            border-radius: 4px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .scan-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .scan-option {
+            flex: 1;
+            min-width: 200px;
+        }
+    </style>
+</head>
+<body>
+
+
+<div class="layui-layout layui-layout-admin">
+    <div class="layui-header">
+        <div class="layui-logo layui-hide-xs layui-bg-black">WebScanX</div>
+        <ul class="layui-nav layui-layout-right">
+            <li class="layui-nav-item layui-hide layui-show-sm-inline-block">
+                <a href="javascript:;">
+                    <img src="//unpkg.com/outeres@0.0.10/img/layui/icon-v2.png" class="layui-nav-img">
+                    admin
+                </a>
+                <dl class="layui-nav-child">
+                    <dd><a href="/manager/myinfo/">个人信息</a></dd>
+                    <dd><a href="javascript:;">退出</a></dd>
+                </dl>
+            </li>
+        </ul>
+    </div>
+
+    <div class="layui-side layui-bg-black">
+        <div class="layui-side-scroll">
+            <ul class="layui-nav layui-nav-tree" lay-filter="test">
+                <li class="layui-nav-item"><a href="/manager/myinfo/">我的信息</a></li>
+                <li class="layui-nav-item"><a href="/manager/userman/">用户管理</a></li>
+                <li class="layui-nav-item"><a href="/manager/fingerman/">指纹管理</a></li>
+                <li class="layui-nav-item"><a href="/manager/fingertype/">指纹分类管理</a></li>
+                <li class="layui-nav-item"><a href="/manager/scan_form/">漏洞探测</a></li>
+                <li class="layui-nav-item"><a href="/manager/port_scan_form/">端口扫描</a></li>
+                <li class="layui-nav-item"><a href="/manager/finger_scan_form/">指纹识别</a></li>
+                <li class="layui-nav-item"><a href="/manager/pocmanage/">POC管理</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="layui-body">
+        <div class="layui-container">
+            <div class="layui-card">
+                <div class="layui-card-header">配置管理</div>
+                <div class="layui-card-body">
+    <form id="config-form" class="layui-form">
+        <div class="layui-form-item">
+            <label class="layui-form-label">Email</label>
+            <div class="layui-input-block">
+                <input type="password" name="Email" placeholder="Email" class="layui-input" required>
+                <i class="layui-icon layui-icon-eye" onclick="togglePasswordVisibility(this, 'Email')"></i>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">Fofa Token</label>
+            <div class="layui-input-block">
+                <input type="password" name="Fofa_token" placeholder="Fofa Token" class="layui-input" required>
+                <i class="layui-icon layui-icon-eye" onclick="togglePasswordVisibility(this, 'Fofa_token')"></i>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">Fofa Timeout</label>
+            <div class="layui-input-block">
+                <input type="text" name="Fofa_timeout" placeholder="Fofa Timeout" class="layui-input" required>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">Hunter Key</label>
+            <div class="layui-input-block">
+                <input type="password" name="Hunter_key" placeholder="Hunter Key" class="layui-input" required>
+                <i class="layui-icon layui-icon-eye" onclick="togglePasswordVisibility(this, 'Hunter_key')"></i>
+            </div>
+        </div>
+                        <div class="layui-form-item">
+                            <div class="layui-input-block">
+                                <button class="layui-btn layui-btn-normal" lay-submit lay-filter="configForm">
+                                    更新配置
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="layui-card-header">指纹识别</div>
+                <div class="layui-card-body">
+                    <form id="fingerscan-form" class="layui-form">
+                        <div class="layui-form-item layui-form-text">
+                            <label class="layui-form-label">多个目标批量指纹识别,换行分割,支持无协议</label>
+                            <div class="layui-input-block">
+                                <textarea name="local" placeholder="--local" class="layui-textarea"
+                                          required></textarea>
+                            </div>
+                        </div>
+                        {#                        <div class="layui-form-item">#}
+                        {#                            <label class="layui-form-label">端口</label>#}
+                        {#                            <div class="layui-input-block">#}
+                        {#                                <input type="text" name="ports" placeholder="例如: 80,443" autocomplete="off"#}
+                        {#                                       class="layui-input">#}
+                        {#                            </div>#}
+                        {#                        </div>#}
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">扫描选项</label>
+                            <div class="layui-input-block">
+                                <input type="checkbox" name="finger" title="指纹识别 (finger)">
+                                <input type="checkbox" name="fofaext" title="fofa提取 (fofaext)">
+                                {#                                <span class="layui-form-mid" style="color: red;">fofaext功能不要使用批量搜索,指定语法就行,fofa爬取数据过大易混</span>#}
+                            </div>
+                        </div>
+                        <div class="scan-options">
+                            <div class="scan-option">
+                                <label class="layui-form-label">线程大小(default 100)</label>
+                                <div class="layui-input-block">
+                                    <input type="number" name="thread" placeholder="--thread" autocomplete="off"
+                                           class="layui-input">
+                                </div>
+                            </div>
+                            <div class="scan-option">
+                                <label class="layui-form-label">识别单个目标</label>
+                                <div class="layui-input-block">
+                                    <input type="text" name="url" placeholder="--url(例:http://127.0.0.1)"
+                                           autocomplete="off"
+                                           class="layui-input" disabled>
+                                    <span class="layui-form-mid" style="color: red;">该功能暂时有 bug，未开启(可使用批量识别输入单个目标)。</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="scan-options">
+                            <div class="scan-option">
+                                <label class="layui-form-label">fofa提取资产，进行指纹识别，支持fofa所有语法</label>
+                                <div class="layui-input-block">
+                                    <input type="text" name="fofa"
+                                           placeholder="fofa爬取 --fofa(例:domain=&quot;example.com&quot;)"
+                                           autocomplete="off"
+                                           class="layui-input">
+                                </div>
+                            </div>
+                            <div class="scan-option">
+                                <label class="layui-form-label">hunter提取资产，进行指纹识别，支持hunter所有语法</label>
+                                <div class="layui-input-block">
+                                    <input type="text" name="hunter" placeholder="hunter (--hunter)" autocomplete="off"
+                                           class="layui-input">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="scan-options">
+                            <div class="scan-option">
+                                <label class="layui-form-label">指定访问目标时的代理，支持http代理和socks5</label>
+                                <div class="layui-input-block">
+                                    <input type="text" name="proxy" placeholder="--proxy" autocomplete="off"
+                                           class="layui-input">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="layui-form-item">
+                            <div class="layui-input-block">
+                                <button class="layui-btn layui-btn-normal" lay-submit lay-filter="fingerscanForm">
+                                    开始扫描
+                                </button>
+                                <button type="button" id="stop-scan" class="layui-btn layui-btn-danger"
+                                        style="display:none;">停止扫描
+                                </button>
+
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="layui-card" style="margin-top: 20px;">
+                <div class="layui-card-header">扫描结果</div>
+                <div class="layui-card-body">
+                    <pre id="result"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script src="//unpkg.com/layui@2.9.16/dist/layui.js"></script>
+
+<script>
+
+ function togglePasswordVisibility(icon, inputName) {
+    const inputField = document.querySelector(`input[name="${inputName}"]`);
+
+    // 切换输入框类型
+    if (inputField.type === "password") {
+        inputField.type = "text"; // 显示密码
+        icon.classList.remove('layui-icon-eye');
+        icon.classList.add('layui-icon-eye-close'); // 切换图标
+    } else {
+        inputField.type = "password"; // 隐藏密码
+        icon.classList.remove('layui-icon-eye-close');
+        icon.classList.add('layui-icon-eye'); // 切换图标
+    }
+}
+    layui.use(['form', 'layer'], function () {
+        var form = layui.form;
+        var layer = layui.layer;
+
+        // 加载配置
+        $.get('/manager/get_ehole_config/', function (data) {
+            $('input[name="Email"]').val(data.Email);
+            $('input[name="Fofa_token"]').val(data.Fofa_token);
+            $('input[name="Fofa_timeout"]').val(data.Fofa_timeout);
+            $('input[name="Hunter_key"]').val(data.Hunter_key);
+        });
+
+        // 提交表单更新配置
+        form.on('submit(configForm)', function (data) {
+            $.post('/manager/update_ehole_config/', data.field, function (response) {
+                layer.msg('配置更新成功', {icon: 1});
+            }).fail(function (xhr) {
+                layer.msg('更新失败: ' + xhr.responseText, {icon: 2});
+            });
+            return false;
+        });
+    });
+
+
+    layui.use(['form', 'layer'], function () {
+        var form = layui.form;
+        var layer = layui.layer;
+
+        form.on('submit(fingerscanForm)', function (data) {
+            $('#stop-scan').show();
+            layer.msg('扫描已开始', {icon: 16, time: 0});
+            $.ajax({
+                type: 'POST',
+                url: "{% url 'finger_scan' %}",
+                data: data.field,
+                success: function (response) {
+                    layer.closeAll();
+                    $('#result').text('');
+                    $('#result').text(response.result);
+                    $('#result').prepend("新结果已更新:\n");
+                    $('#stop-scan').hide();
+                    layer.msg('扫描完成', {icon: 1});
+                },
+                error: function (xhr) {
+                    layer.closeAll();
+                    layer.msg('扫描失败: ' + xhr.responseText, {icon: 2});
+                    $('#stop-scan').hide();
+                }
+            });
+            return false;
+        });
+
+        $('#stop-scan').on('click', function () {
+            layer.confirm('确定要停止扫描吗？', {icon: 3, title: '提示'}, function (index) {
+                $.ajax({
+                    type: 'POST',
+                    url: "{% url 'stop_finger_scan' %}",
+                    success: function (response) {
+                        $('#result').append("\n扫描已停止。");
+                        $('#stop-scan').hide();
+                        layer.msg('扫描已停止', {icon: 1});
+                    },
+                    error: function (xhr) {
+                        layer.msg('停止扫描失败: ' + xhr.responseText, {icon: 2});
+                    }
+                });
+                layer.close(index);
+            });
+        });
+    });
+</script>
+</body>
+</html>
